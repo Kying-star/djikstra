@@ -1,0 +1,3 @@
+/Users/kying-star/Documents/文档/大学/大二下/移动通信/实验课2-通信网/lab_2/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/Users/kying-star/Documents/文档/大学/大二下/移动通信/实验课2-通信网/lab_2/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/kying-star/Documents/文档/大学/大二下/移动通信/实验课2-通信网/lab_2/cmake-build-debug/CMakeFiles/lab_2.dir
