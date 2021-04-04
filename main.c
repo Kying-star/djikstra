@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #define infinite 65536
 typedef struct {
     int weight;
@@ -13,16 +14,89 @@ typedef struct {
     link * memory;
 } Graph;
 typedef struct {
-    int array[10];
+    int array[8];
+    int valueArray[8];
     int top;
 }Stack;
-void push(Stack * stack,int CityID){
-    stack->array[stack->top++] = CityID;
+typedef struct {
+    char CityNmae[200];
+}CityName;
+void push(Stack * stack,int CityID,int weight); // 入栈
+void pop(Stack * stack);// 出栈
+void init(Graph *G,int CityID,int TargetCityID,int weight);// 初始化图
+void getData(Graph* G);// 获取数据并初始化链表
+void getCityName(CityName * citys);
+void ShowGraphDist(Graph *G);// 展示图中各点dist矩阵
+void initDist(Graph *G); // 初始化各点dist矩阵
+void ShowGraph(Graph *G,CityName* citys); // 展示图中数据
+int isOK(int targetCityID, int * S,int len); //判断是否刷新dist
+int stackIsOk(Graph* G,Stack* stack,int CityID); //判断路径是否正确
+void djistra(Graph *G,int CityID); // 狄杰斯塔拉算法
+void dps(Graph* G,link* node,Stack* stack,int CityID,int targetCityID); //深度遍历
+void findPath(Graph *G,int CityID,int targetCityID,Stack* stack); //打印途经节点
+void showAllCity(CityName* citys); //展示所有城市信息
+void inputCityID(int* CityID); //获取源点城市ID
+void main(){
+    Graph G[8];
+    CityName citys[8];
+    Stack stack;
+    int CityID;
+    initDist(G);
+    getData(G);
+    getCityName(citys);
+    showAllCity(citys);
+    ShowGraph(G,citys);
+    for (int i = 0; i < 8; ++i) {
+        djistra(G,i);
+    }
+    inputCityID(&CityID);
+    for (int j = 0; j < 8; ++j) {
+        findPath(G,CityID,j,&stack);
+        printf("\n");
+    }
+}
+void inputCityID(int* CityID){
+    int flag = 1;
+    while (flag){
+        printf("请输入起点城市(0-7):");
+        scanf("%d",CityID);
+        if(*CityID>=0 && *CityID<=7){
+            flag = 0;
+        }else{
+            printf("warming -- 输入参数非法请重新输入\n");
+        }
+    }
+};
+void showAllCity(CityName* citys){
+    for (int i = 0; i < 8; ++i) {
+        printf("节点%d:%s\n",i+1,citys[i].CityNmae);
+    }
+}
+void getCityName(CityName * citys){
+    FILE *fp = NULL;
+    char str[255];
+    int order;
+    int i = 0;
+    if((fp=fopen("/Users/kying-star/Documents/文档/大学/大二下/移动通信/实验课2-通信网/lab_2/city","r")) == NULL)
+    {
+        printf("文件data.txt打开失败,请检查路径\n");
+        exit(-1);
+    }
+    while (fscanf(fp, "%s",str) != EOF){
+        strcpy(citys[i++].CityNmae,str);
+        citys[i-1].CityNmae[6] = '\0';
+        //printf("%s\n",citys[i-1].CityNmae);
+    }
+    fclose(fp);
+}
+void push(Stack * stack,int CityID,int weight){
+    stack->array[stack->top] = CityID;
+    stack->valueArray[stack->top] = weight;
+    stack->top++;
 }
 void pop(Stack * stack){
     stack->top--;
 }
-// 初始化链表
 void init(Graph *G,int CityID,int TargetCityID,int weight){
     link * p = (link*)malloc(sizeof(link));//创建一个头结点
     if (G[CityID].head == NULL){
@@ -40,7 +114,6 @@ void init(Graph *G,int CityID,int TargetCityID,int weight){
     p->next = NULL;
 
 }
-// 获取数据并初始化链表
 void getData(Graph* G){
     FILE *fp = NULL;
     int CityID,TargetCityID,weight;
@@ -58,7 +131,6 @@ void getData(Graph* G){
     }
     fclose(fp);
 }
-// 展示链表
 void ShowGraphDist(Graph *G){
     for (int i = 0; i < 8; ++i) {
         printf("\t\t City%d",i+1);
@@ -68,7 +140,6 @@ void ShowGraphDist(Graph *G){
         printf("City%d\t",i+1);
         for (int j = 0; j < 8; ++j) {
             if(G[i].dist[j] == infinite){
-                printf("XXXXXX\t\t");
             }else{
                 printf("%6d\t\t",G[i].dist[j]);
             }
@@ -88,27 +159,19 @@ void initDist(Graph *G){
         }
     }
 }
-void ShowGraph(Graph *G){
+
+void ShowGraph(Graph *G,CityName* citys){
     for (int i = 0; i < 8; ++i) {
         link* temp = G[i].head->next;
-        printf("节点%d--|\n ",i+1);
         while (temp){
-            printf("\t  |--%d-->节点%d\n ",temp->weight,temp->ID+1);
+            printf("节点%d ---> 节点%d    路径长度%d\n ",i+1,temp->ID+1,temp->weight);
             temp = temp->next;
         }
         printf("\n");
     }
     printf("\n");
 }
-int full(Graph *G,int CityId){
-    int flag = 0;
-    for (int i = 0; i < 8; ++i) {
-        if(G[CityId].dist[i] != infinite){
-            flag++;
-        }
-    }
-    return flag;
-}
+
 int isOK(int targetCityID, int * S,int len){
     int flag = 1;
     for (int i = 0; i < len; ++i) {
@@ -118,24 +181,16 @@ int isOK(int targetCityID, int * S,int len){
     }
     return flag;
 }
+
 int stackIsOk(Graph* G,Stack* stack,int CityID){
     int len = 0;
     link* head = G[CityID].head->next;
-    for (int i = 1; i < stack->top; ++i) {
-        while (head){
-            int num1 = head->ID;
-            int num2 = stack->array[i];
-            if( head->ID == stack->array[i] ){
-                len+=head->weight;
-                head = G[stack->array[i]].head;
-                break;
-            }else{
-                head = head->next;
-            }
-        }
+    for (int i = 0; i < stack->top; ++i) {
+        len+=stack->valueArray[i];
     }
     return len;
 }
+
 void djistra(Graph *G,int CityID){
     int ID[8],i = 0,count = 0,signCount = 0;
     int len = 0,flag[8];
@@ -191,57 +246,36 @@ void djistra(Graph *G,int CityID){
         i = 0;// 清空存储节点ID
     }
 }
+
 void dps(Graph* G,link* node,Stack* stack,int CityID,int targetCityID){
     if(stackIsOk(G,stack,CityID) == G[CityID].dist[targetCityID] && stack->array[0] == CityID){
+        printf("原节点%d到节点%d到最短路径长度为%d",CityID+1,targetCityID+1,stackIsOk(G,stack,CityID));
+        printf("\n");
+        printf("必经节点");
         for (int i = 0; i < stack->top; ++i) {
-            printf("%d-->",stack->array[i] + 1);
+            printf("-->%d",stack->array[i] + 1);
         }
-        printf("路径长度%d",G[CityID].dist[targetCityID]);
         printf("\n");
     }
     link* head = G[node->ID].head->next;
     while (head){
         if(isOK(head->ID,stack->array,stack->top)){
-            push(stack,head->ID);
+            push(stack,head->ID,head->weight);
             dps(G,head,stack,CityID,targetCityID);
+            pop(stack);
         }
         head = head->next;
     }
-    pop(stack);
 }
+
 void findPath(Graph *G,int CityID,int targetCityID,Stack* stack){
     stack->top = 0;
     link * nowNode = G[CityID].head->next;
-    push(stack,CityID);
+    push(stack,CityID,0);
     while (nowNode){
-        push(stack,nowNode->ID);
+        push(stack,nowNode->ID,nowNode->weight);
         dps(G,nowNode,stack,CityID,targetCityID);
         pop(stack);
         nowNode = nowNode->next;
-    }
-}
-
-void main(){
-    Graph G[8];
-    Stack stack;
-    initDist(G);
-    getData(G);
-    //ShowGraphDist(G);
-    // ShowGraph(G);
-    for (int i = 0; i < 8; ++i) {
-        djistra(G,i);
-    }
-    ShowGraphDist(G);
-//    for (int i = 0; i < 8; ++i) {
-//        for (int j = 0; j < 8; ++j) {
-//            if(i!=j){
-//                findPath(G,i,j,&stack);
-//                printf("\n");
-//            }
-//        }
-//    }
-    for (int i = 0; i < 8; ++i) {
-        findPath(G,2,i,&stack);
-        printf("\n");
     }
 }
